@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { GAME_CONSTANTS, type TrafficVehicle, type Vector3 } from '../../shared/types';
+import { GAME_CONSTANTS, type TrafficVehicle, type Vector3 } from '../shared/types';
 
 interface TrafficConfig {
   id: string;

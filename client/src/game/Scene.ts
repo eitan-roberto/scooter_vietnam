@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
 import { ScooterController } from './ScooterController';
 import { TrafficManager } from './TrafficManager';
-import { GAME_CONSTANTS, SCOOTER_COLORS } from '../../shared/types';
+import { GAME_CONSTANTS, SCOOTER_COLORS } from '../shared/types';
 
 export class GameScene {
   private scene: THREE.Scene;

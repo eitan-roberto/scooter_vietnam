@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import * as CANNON from 'cannon-es';
-import { GAME_CONSTANTS, type PlayerInput } from '../../shared/types';
+import { GAME_CONSTANTS, type PlayerInput } from '../shared/types';
 
 export interface ScooterPhysics {
   mesh: THREE.Group;

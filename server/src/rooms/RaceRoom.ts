@@ -1,6 +1,6 @@
 import { Room, Client } from 'colyseus';
 import { Schema, type, MapSchema } from '@colyseus/schema';
-import { GAME_CONSTANTS } from '../../shared/types';
+import { GAME_CONSTANTS } from '../shared/types';
 
 // Player state schema
 class Player extends Schema {
