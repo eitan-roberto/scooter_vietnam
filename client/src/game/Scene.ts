@@ -78,9 +78,6 @@ export class GameScene {
     
     // Handle resize
     window.addEventListener('resize', () => this.onWindowResize());
-    
-    // Start loop
-    this.animate();
   }
   
   private createEnvironment(): void {
@@ -371,11 +368,8 @@ export class GameScene {
     this.onPositionUpdate(position);
   }
   
-  private animate = (): void => {
-    requestAnimationFrame(this.animate);
-    
-    const deltaTime = Math.min(this.clock.getDelta(), 0.1); // Cap at 100ms
-    
+  // Public update method called from game loop
+  update(deltaTime: number): void {
     // Update physics
     this.playerScooter.update(deltaTime);
     this.updateAI(deltaTime);
@@ -394,7 +388,7 @@ export class GameScene {
     
     // Render
     this.renderer.render(this.scene, this.camera);
-  };
+  }
   
   private onWindowResize(): void {
     this.camera.aspect = window.innerWidth / window.innerHeight;
@@ -403,7 +397,8 @@ export class GameScene {
   }
   
   getFPS(): number {
-    return Math.round(1 / this.clock.getDelta());
+    const delta = this.clock.getDelta();
+    return delta > 0 ? Math.round(1 / delta) : 60;
   }
   
   destroy(): void {

@@ -21,6 +21,7 @@ export function Game() {
 
   // Use refs for input state to avoid closure issues
   const keysRef = useRef({ w: false, a: false, s: false, d: false, space: false });
+  const inputRef = useRef({ throttle: 0, steering: 0, kick: false });
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -41,61 +42,110 @@ export function Game() {
       setFps(game.getFPS());
     }, 1000);
 
-    // Keyboard controls - use ref to avoid closure issues
+    // Keyboard controls - capture on window to ensure we get all keys
     const handleKeyDown = (e: KeyboardEvent) => {
-      switch (e.key.toLowerCase()) {
-        case 'w': case 'arrowup': keysRef.current.w = true; break;
-        case 'a': case 'arrowleft': keysRef.current.a = true; break;
-        case 's': case 'arrowdown': keysRef.current.s = true; break;
-        case 'd': case 'arrowright': keysRef.current.d = true; break;
-        case ' ': keysRef.current.space = true; break;
+      const key = e.key.toLowerCase();
+      if (['w', 'a', 's', 'd', ' ', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(key)) {
+        e.preventDefault();
+      }
+      
+      switch (key) {
+        case 'w':
+        case 'arrowup':
+          keysRef.current.w = true;
+          break;
+        case 'a':
+        case 'arrowleft':
+          keysRef.current.a = true;
+          break;
+        case 's':
+        case 'arrowdown':
+          keysRef.current.s = true;
+          break;
+        case 'd':
+        case 'arrowright':
+          keysRef.current.d = true;
+          break;
+        case ' ':
+          keysRef.current.space = true;
+          break;
       }
     };
     
     const handleKeyUp = (e: KeyboardEvent) => {
-      switch (e.key.toLowerCase()) {
-        case 'w': case 'arrowup': keysRef.current.w = false; break;
-        case 'a': case 'arrowleft': keysRef.current.a = false; break;
-        case 's': case 'arrowdown': keysRef.current.s = false; break;
-        case 'd': case 'arrowright': keysRef.current.d = false; break;
-        case ' ': keysRef.current.space = false; break;
+      const key = e.key.toLowerCase();
+      switch (key) {
+        case 'w':
+        case 'arrowup':
+          keysRef.current.w = false;
+          break;
+        case 'a':
+        case 'arrowleft':
+          keysRef.current.a = false;
+          break;
+        case 's':
+        case 'arrowdown':
+          keysRef.current.s = false;
+          break;
+        case 'd':
+        case 'arrowright':
+          keysRef.current.d = false;
+          break;
+        case ' ':
+          keysRef.current.space = false;
+          break;
       }
     };
 
-    // Game loop for input
-    let animationId: number;
-    const updateInput = () => {
+    // Game loop for input - runs every frame
+    let lastTime = performance.now();
+    const gameLoop = () => {
       if (!gameRef.current) return;
       
+      const now = performance.now();
+      const deltaTime = Math.min((now - lastTime) / 1000, 0.1); // Cap at 100ms
+      lastTime = now;
+      
+      // Calculate input from keyboard
       let throttle = 0;
       let steering = 0;
       
-      // Keyboard
       if (keysRef.current.w) throttle = 1;
       if (keysRef.current.s) throttle = -0.5;
       if (keysRef.current.a) steering = -1;
       if (keysRef.current.d) steering = 1;
       
-      // Touch joystick overrides
+      // Touch joystick overrides keyboard
       if (joystickRef.current.active) {
         throttle = -joystick.y;
         steering = joystick.x;
       }
       
-      gameRef.current.setPlayerInput(throttle, steering, isKicking || keysRef.current.space);
-      animationId = requestAnimationFrame(updateInput);
+      const kick = isKicking || keysRef.current.space;
+      
+      // Update input ref for debugging
+      inputRef.current = { throttle, steering, kick };
+      
+      // Send to game
+      gameRef.current.setPlayerInput(throttle, steering, kick);
+      gameRef.current.update(deltaTime);
+      
+      requestAnimationFrame(gameLoop);
     };
     
-    updateInput();
+    // Start loops
+    gameLoop();
 
-    window.addEventListener('keydown', handleKeyDown);
+    // Add event listeners
+    window.addEventListener('keydown', handleKeyDown, { passive: false });
     window.addEventListener('keyup', handleKeyUp);
-    // Focus window for keyboard input
+    
+    // Ensure window has focus
     window.focus();
+    document.body.focus();
 
     return () => {
       clearInterval(fpsInterval);
-      cancelAnimationFrame(animationId);
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
       game.destroy();
@@ -146,6 +196,11 @@ export function Game() {
     setJoystick({ x: 0, y: 0 });
   }, []);
 
+  // Click to focus
+  const handleClick = () => {
+    window.focus();
+  };
+
   return (
     <div className="relative w-full h-screen overflow-hidden">
       <canvas
@@ -154,6 +209,7 @@ export function Game() {
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
+        onClick={handleClick}
       />
       
       {/* HUD */}
@@ -215,8 +271,8 @@ export function Game() {
       </div>
       
       {/* Controls indicator */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/60 text-white px-4 py-2 rounded-lg text-sm">
-        Use WASD or touch controls to drive
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/60 text-white px-4 py-2 rounded-lg text-sm pointer-events-auto cursor-pointer" onClick={handleClick}>
+        CLICK HERE then use WASD to drive
       </div>
     </div>
   );
