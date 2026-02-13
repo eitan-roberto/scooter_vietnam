@@ -128,24 +128,29 @@ export class ScooterController {
     const balanceFactor = this.physics.balance / 100;
     const maxSpeed = GAME_CONSTANTS.MAX_SPEED / 3.6; // Convert km/h to m/s
     
-    // Apply throttle
-    const forwardForce = new CANNON.Vec3(0, 0, -1);
-    forwardForce.scale(this.input.throttle * GAME_CONSTANTS.ACCELERATION * balanceFactor, forwardForce);
+    // Apply throttle (stronger force for better feel)
+    if (Math.abs(this.input.throttle) > 0.01) {
+      const forceMagnitude = this.input.throttle * 800 * balanceFactor; // Increased from GAME_CONSTANTS.ACCELERATION
+      const forwardForce = new CANNON.Vec3(0, 0, -forceMagnitude);
+      
+      // Rotate force to match scooter rotation
+      const rotation = this.physics.body.quaternion;
+      const rotatedForce = rotation.vmult(forwardForce);
+      
+      // Apply force at center of mass
+      this.physics.body.applyForce(rotatedForce, this.physics.body.position);
+    }
     
-    // Rotate force to match scooter rotation
-    const rotation = this.physics.body.quaternion;
-    const rotatedForce = rotation.vmult(forwardForce);
-    
-    // Apply force at center of mass
-    this.physics.body.applyForce(rotatedForce, this.physics.body.position);
-    
-    // Apply steering (torque around Y axis)
-    const steeringTorque = new CANNON.Vec3(0, this.input.steering * GAME_CONSTANTS.HANDLING * -1, 0);
-    this.physics.body.applyTorque(steeringTorque);
-    
-    // Clamp speed
+    // Apply steering (torque around Y axis) - only when moving
     const velocity = this.physics.body.velocity;
     const currentSpeed = velocity.length();
+    if (currentSpeed > 0.5 && Math.abs(this.input.steering) > 0.01) {
+      const steeringForce = this.input.steering * 150 * (currentSpeed / maxSpeed);
+      const steeringTorque = new CANNON.Vec3(0, -steeringForce, 0);
+      this.physics.body.applyTorque(steeringTorque);
+    }
+    
+    // Clamp speed
     if (currentSpeed > maxSpeed * balanceFactor) {
       velocity.scale((maxSpeed * balanceFactor) / currentSpeed, velocity);
       this.physics.body.velocity = velocity;

@@ -19,6 +19,9 @@ export function Game() {
     startY: 0,
   });
 
+  // Use refs for input state to avoid closure issues
+  const keysRef = useRef({ w: false, a: false, s: false, d: false, space: false });
+
   useEffect(() => {
     if (!canvasRef.current) return;
 
@@ -30,7 +33,6 @@ export function Game() {
     game.onBalanceUpdate = setBalance;
     game.onPositionUpdate = setPosition;
     game.onCollision = () => {
-      // Visual feedback for collision
       console.log('Collision!');
     };
 
@@ -39,30 +41,29 @@ export function Game() {
       setFps(game.getFPS());
     }, 1000);
 
-    // Keyboard controls
-    const keys = { w: false, a: false, s: false, d: false, space: false };
-    
+    // Keyboard controls - use ref to avoid closure issues
     const handleKeyDown = (e: KeyboardEvent) => {
       switch (e.key.toLowerCase()) {
-        case 'w': case 'arrowup': keys.w = true; break;
-        case 'a': case 'arrowleft': keys.a = true; break;
-        case 's': case 'arrowdown': keys.s = true; break;
-        case 'd': case 'arrowright': keys.d = true; break;
-        case ' ': keys.space = true; break;
+        case 'w': case 'arrowup': keysRef.current.w = true; break;
+        case 'a': case 'arrowleft': keysRef.current.a = true; break;
+        case 's': case 'arrowdown': keysRef.current.s = true; break;
+        case 'd': case 'arrowright': keysRef.current.d = true; break;
+        case ' ': keysRef.current.space = true; break;
       }
     };
     
     const handleKeyUp = (e: KeyboardEvent) => {
       switch (e.key.toLowerCase()) {
-        case 'w': case 'arrowup': keys.w = false; break;
-        case 'a': case 'arrowleft': keys.a = false; break;
-        case 's': case 'arrowdown': keys.s = false; break;
-        case 'd': case 'arrowright': keys.d = false; break;
-        case ' ': keys.space = false; break;
+        case 'w': case 'arrowup': keysRef.current.w = false; break;
+        case 'a': case 'arrowleft': keysRef.current.a = false; break;
+        case 's': case 'arrowdown': keysRef.current.s = false; break;
+        case 'd': case 'arrowright': keysRef.current.d = false; break;
+        case ' ': keysRef.current.space = false; break;
       }
     };
 
     // Game loop for input
+    let animationId: number;
     const updateInput = () => {
       if (!gameRef.current) return;
       
@@ -70,28 +71,31 @@ export function Game() {
       let steering = 0;
       
       // Keyboard
-      if (keys.w) throttle = 1;
-      if (keys.s) throttle = -0.5;
-      if (keys.a) steering = -1;
-      if (keys.d) steering = 1;
+      if (keysRef.current.w) throttle = 1;
+      if (keysRef.current.s) throttle = -0.5;
+      if (keysRef.current.a) steering = -1;
+      if (keysRef.current.d) steering = 1;
       
       // Touch joystick overrides
       if (joystickRef.current.active) {
-        throttle = -joystick.y; // Inverted Y
+        throttle = -joystick.y;
         steering = joystick.x;
       }
       
-      gameRef.current.setPlayerInput(throttle, steering, isKicking || keys.space);
-      requestAnimationFrame(updateInput);
+      gameRef.current.setPlayerInput(throttle, steering, isKicking || keysRef.current.space);
+      animationId = requestAnimationFrame(updateInput);
     };
     
     updateInput();
 
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
+    // Focus window for keyboard input
+    window.focus();
 
     return () => {
       clearInterval(fpsInterval);
+      cancelAnimationFrame(animationId);
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
       game.destroy();

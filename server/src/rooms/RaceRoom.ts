@@ -1,4 +1,4 @@
-import { Room, Client } from 'colyseus';
+import { Room, Client } from '@colyseus/core';
 import { Schema, type, MapSchema } from '@colyseus/schema';
 import { GAME_CONSTANTS } from '../shared/types';
 
